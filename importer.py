@@ -90,6 +90,29 @@ def crear_comunas(comunas, num_dist):
 def crear_tablas():
     exec_sql(crear_tabla_distrito)
     exec_sql(crear_tabla_comuna)
+    exec_sql(crear_tabla_diputado)
+
+
+def diputados():
+    url = "http://opendata.camara.cl/camaradiputados/WServices/WSDiputado.asmx/retornarDiputadosXPeriodo?prmPeriodoId=8"
+    content = get_with_cache("diputados.xml", url)
+    for diputado_periodo in content:
+        diputado = diputado_periodo[2]
+        assert clean_tag(diputado[0]) == "Id"
+        assert clean_tag(diputado[1]) == "Nombre"
+        assert clean_tag(diputado[3]) == "ApellidoPaterno"
+        assert clean_tag(diputado[4]) == "ApellidoMaterno"
+        tiene_nacimiento = clean_tag(diputado[5]) == "FechaNacimiento"
+        assert clean_tag(diputado_periodo[3]) == "Distrito"
+        dipid = int(diputado[0].text)
+        nombre = diputado[1].text
+        a_pat = diputado[3].text
+        a_mat = diputado[4].text
+        nacimiento = diputado[5].text.split(
+            'T')[0] if tiene_nacimiento else None
+        num_dist = int(diputado_periodo[3][0].text)
+        exec_sql(crear_diputado, vals=(dipid, nombre,
+                                       a_pat, a_mat, nacimiento, num_dist))
 
 
 def distritos():
@@ -103,7 +126,7 @@ def distritos():
         crear_comunas(distrito[1], num_dist)
 
 
-tareas = ["crear_tablas", "distritos"]
+tareas = ["crear_tablas", "distritos", "diputados"]
 if __name__ == "__main__":
     for t in tareas:
         # O(n^2) pero a quién le importa
