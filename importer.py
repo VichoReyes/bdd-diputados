@@ -32,6 +32,25 @@ CREATE TABLE IF NOT EXISTS distrito (
 );
 '''
 
+# TODO diagrama
+crear_tabla_diputado = '''
+CREATE TABLE IF NOT EXISTS diputado (
+    id int primary key,
+    nombre varchar(50),
+    a_paterno varchar(50), -- actualizar E-R
+    a_materno varchar(50), -- actualizar E-R
+    nacimiento date, -- actualizar E-R
+    distrito int references distrito(numero)
+);
+'''
+
+crear_diputado = '''
+INSERT INTO diputado
+(id, nombre, a_paterno, a_materno, nacimiento, distrito)
+VALUES (%s, %s, %s, %s, %s, %s)
+ON CONFLICT DO NOTHING;
+'''
+
 crear_comuna = '''
 INSERT INTO comuna (distrito, nombre, numero) VALUES (%s, %s, %s)
 ON CONFLICT DO NOTHING;
