@@ -2,6 +2,7 @@ import requests
 import psycopg2
 import xml.etree.ElementTree as ET
 import sys
+import re
 
 conn = psycopg2.connect(database="bbdd", user="vicente", password="asdf")
 
@@ -48,7 +49,7 @@ crear_p_ley = '''
 CREATE TABLE IF NOT EXISTS p_ley (
     foreign_id int,
     boletin varchar(10) primary key,
-    resumen varchar(200), -- actualizar E-R
+    resumen text, -- actualizar E-R
     fecha_ingreso date
 );
 '''
@@ -59,6 +60,20 @@ CREATE TABLE IF NOT EXISTS voto (
     p_ley varchar(10) references p_ley(boletin),
     opcion varchar(20)
 );
+'''
+
+insertar_p_ley = '''
+INSERT INTO p_ley
+(foreign_id, boletin, resumen, fecha_ingreso)
+VALUES (%s, %s, %s, %s)
+ON CONFLICT DO NOTHING;
+'''
+
+insertar_voto = '''
+INSERT INTO voto
+(diputado, p_ley, opcion)
+VALUES (%s, %s, %s)
+ON CONFLICT DO NOTHING;
 '''
 
 insertar_diputado = '''
@@ -72,7 +87,6 @@ insertar_comuna = '''
 INSERT INTO comuna (distrito, nombre, numero) VALUES (%s, %s, %s)
 ON CONFLICT DO NOTHING;
 '''
-
 
 insertar_distrito = '''
 INSERT INTO distrito (numero) VALUES (%s)
@@ -112,26 +126,97 @@ def crear_tablas():
     exec_sql(crear_voto)
 
 
+prefijo_horrible = "{http://opendata.camara.cl/camaradiputados/v1}"
+
+
+def votos2019():
+    regex = re.compile("[0-9]+-[0-9]+")
+    url = "http://opendata.camara.cl/camaradiputados/WServices/WSLegislativo.asmx/retornarVotacionesXAnno?prmAnno=2019"
+    content = get_with_cache("votos2019.xml", url)
+    for vot in content:
+        assert clean_tag(vot[0]) == "Id"
+        assert clean_tag(vot[1]) == "Descripcion"
+        if vot.find(prefijo_horrible+"Tipo").text != "Proyecto de Ley":
+            continue
+        votid = int(vot[0].text)
+        boletin = regex.search(vot[1].text).group(0)
+        insertar_p_si_falta(boletin)
+        insertar_votacion(votid, boletin)
+
+
+def existe_p_ley(boletin: str) -> bool:
+    c = conn.cursor()
+    c.execute("SELECT boletin FROM p_ley WHERE boletin = %s", (boletin,))
+    return c.fetchone() is not None
+
+
+def insertar_p_si_falta(boletin: str):
+    if existe_p_ley(boletin):
+        return
+    url = "http://opendata.camara.cl/camaradiputados/WServices/WSLegislativo.asmx/retornarProyectoLey?prmNumeroBoletin="+boletin
+    content = get_with_cache("p_ley_"+boletin+".xml", url)
+    assert clean_tag(content[0]) == "Id"
+    assert clean_tag(content[2]) == "Nombre"
+    assert clean_tag(content[3]) == "FechaIngreso"
+    # assert clean_tag(content[8]) == "Materias"
+    forid = content[0].text
+    resumen = content[2].text
+    fecha = content[3].text.split('T')[0]
+    exec_sql(insertar_p_ley, (forid, boletin, resumen, fecha))
+
+
+def insertar_votacion(id: int, boletin: str):
+    url = "http://opendata.camara.cl/camaradiputados/WServices/WSLegislativo.asmx/retornarVotacionDetalle?prmVotacionId=" + \
+        str(id)
+    content = get_with_cache("votac"+str(id)+".xml", url)
+    try:
+        votos = content.find(prefijo_horrible+"Votos")
+        assert votos
+    except:
+        print("Problema en la votación con id", id)
+        return  # Saltarse el caso problemático
+    for voto in votos:
+        id_diputado = int(voto[0][0].text)
+        opcion = voto[1].text
+        try:
+            exec_sql(insertar_voto, vals=(id_diputado, boletin, opcion))
+        except psycopg2.errors.ForeignKeyViolation:
+            conn.rollback()
+            insertar_diputado_desde_id(id_diputado)
+            exec_sql(insertar_voto, vals=(id_diputado, boletin, opcion))
+
+
 def diputados():
     url = "http://opendata.camara.cl/camaradiputados/WServices/WSDiputado.asmx/retornarDiputadosXPeriodo?prmPeriodoId=8"
     content = get_with_cache("diputados.xml", url)
     for diputado_periodo in content:
         diputado = diputado_periodo[2]
-        assert clean_tag(diputado[0]) == "Id"
-        assert clean_tag(diputado[1]) == "Nombre"
-        assert clean_tag(diputado[3]) == "ApellidoPaterno"
-        assert clean_tag(diputado[4]) == "ApellidoMaterno"
-        tiene_nacimiento = clean_tag(diputado[5]) == "FechaNacimiento"
         assert clean_tag(diputado_periodo[3]) == "Distrito"
-        dipid = int(diputado[0].text)
-        nombre = diputado[1].text
-        a_pat = diputado[3].text
-        a_mat = diputado[4].text
-        nacimiento = diputado[5].text.split(
-            'T')[0] if tiene_nacimiento else None
         num_dist = int(diputado_periodo[3][0].text)
-        exec_sql(insertar_diputado, vals=(dipid, nombre,
-                                          a_pat, a_mat, nacimiento, num_dist))
+        insertar_diputado_particular(diputado, num_dist=num_dist)
+
+
+def insertar_diputado_desde_id(dipu_id: int, num_dist=None):
+    url = "http://opendata.camara.cl/camaradiputados/WServices/WSDiputado.asmx/retornarDiputado?prmDiputadoId=" + \
+        str(dipu_id)
+    diputado = get_with_cache('diputado_'+str(dipu_id)+'.xml', url)
+    insertar_diputado_particular(diputado, num_dist=num_dist)
+
+
+def insertar_diputado_particular(diputado: ET.Element, num_dist=None):
+    assert clean_tag(diputado[0]) == "Id"
+    assert clean_tag(diputado[1]) == "Nombre"
+    assert clean_tag(diputado[3]) == "ApellidoPaterno"
+    assert clean_tag(diputado[4]) == "ApellidoMaterno"
+    tiene_nacimiento = clean_tag(diputado[5]) == "FechaNacimiento"
+    dipid = int(diputado[0].text)
+    nombre = diputado[1].text
+    a_pat = diputado[3].text
+    a_mat = diputado[4].text
+    nacimiento = diputado[5].text.split(
+        'T')[0] if tiene_nacimiento else None
+    exec_sql(insertar_diputado, vals=(dipid, nombre,
+                                      a_pat, a_mat, nacimiento, num_dist))
 
 
 def distritos():
@@ -145,7 +230,7 @@ def distritos():
         crear_comunas(distrito[1], num_dist)
 
 
-tareas = ["crear_tablas", "distritos", "diputados"]
+tareas = ["crear_tablas", "distritos", "diputados", "votos2019"]
 if __name__ == "__main__":
     for t in tareas:
         # O(n^2) pero a quién le importa
