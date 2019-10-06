@@ -18,7 +18,7 @@ def clean_tag(el: ET.Element) -> str:
 
 
 # TODO diagrama
-crear_tabla_comuna = '''
+crear_comuna = '''
 CREATE TABLE IF NOT EXISTS comuna (
     distrito int references distrito(numero),
     nombre varchar(50),
@@ -26,14 +26,14 @@ CREATE TABLE IF NOT EXISTS comuna (
 );
 '''
 
-crear_tabla_distrito = '''
+crear_distrito = '''
 CREATE TABLE IF NOT EXISTS distrito (
     numero int primary key
 );
 '''
 
 # TODO diagrama
-crear_tabla_diputado = '''
+crear_diputado = '''
 CREATE TABLE IF NOT EXISTS diputado (
     id int primary key,
     nombre varchar(50),
@@ -44,20 +44,20 @@ CREATE TABLE IF NOT EXISTS diputado (
 );
 '''
 
-crear_diputado = '''
+insertar_diputado = '''
 INSERT INTO diputado
 (id, nombre, a_paterno, a_materno, nacimiento, distrito)
 VALUES (%s, %s, %s, %s, %s, %s)
 ON CONFLICT DO NOTHING;
 '''
 
-crear_comuna = '''
+insertar_comuna = '''
 INSERT INTO comuna (distrito, nombre, numero) VALUES (%s, %s, %s)
 ON CONFLICT DO NOTHING;
 '''
 
 
-crear_distrito = '''
+insertar_distrito = '''
 INSERT INTO distrito (numero) VALUES (%s)
 ON CONFLICT DO NOTHING;
 '''
@@ -84,13 +84,13 @@ def crear_comunas(comunas, num_dist):
         assert clean_tag(com[1]) == "Nombre"
         nombre = com[1].text
         numero = int(com[0].text)
-        exec_sql(crear_comuna, (num_dist, nombre, numero))
+        exec_sql(insertar_comuna, (num_dist, nombre, numero))
 
 
 def crear_tablas():
-    exec_sql(crear_tabla_distrito)
-    exec_sql(crear_tabla_comuna)
-    exec_sql(crear_tabla_diputado)
+    exec_sql(crear_distrito)
+    exec_sql(crear_comuna)
+    exec_sql(crear_diputado)
 
 
 def diputados():
@@ -111,8 +111,8 @@ def diputados():
         nacimiento = diputado[5].text.split(
             'T')[0] if tiene_nacimiento else None
         num_dist = int(diputado_periodo[3][0].text)
-        exec_sql(crear_diputado, vals=(dipid, nombre,
-                                       a_pat, a_mat, nacimiento, num_dist))
+        exec_sql(insertar_diputado, vals=(dipid, nombre,
+                                          a_pat, a_mat, nacimiento, num_dist))
 
 
 def distritos():
@@ -122,7 +122,7 @@ def distritos():
         assert clean_tag(distrito[0]) == "Numero"
         assert clean_tag(distrito[1]) == "Comunas"
         num_dist = int(distrito[0].text)
-        exec_sql(crear_distrito, vals=(num_dist,))
+        exec_sql(insertar_distrito, vals=(num_dist,))
         crear_comunas(distrito[1], num_dist)
 
 
