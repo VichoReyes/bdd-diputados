@@ -17,11 +17,12 @@ def clean_tag(el: ET.Element) -> str:
     return el.tag.split('}')[-1]
 
 
+# TODO diagrama
 crear_tabla_comuna = '''
 CREATE TABLE IF NOT EXISTS comuna (
     distrito int references distrito(numero),
     nombre varchar(50),
-    numero int primary key
+    numero int primary key -- actualizar E-R
 );
 '''
 
