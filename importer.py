@@ -44,6 +44,23 @@ CREATE TABLE IF NOT EXISTS diputado (
 );
 '''
 
+crear_p_ley = '''
+CREATE TABLE IF NOT EXISTS p_ley (
+    foreign_id int,
+    boletin varchar(10) primary key,
+    resumen varchar(200), -- actualizar E-R
+    fecha_ingreso date
+);
+'''
+
+crear_voto = '''
+CREATE TABLE IF NOT EXISTS voto (
+    diputado int references diputado(id),
+    p_ley varchar(10) references p_ley(boletin),
+    opcion varchar(20)
+);
+'''
+
 insertar_diputado = '''
 INSERT INTO diputado
 (id, nombre, a_paterno, a_materno, nacimiento, distrito)
@@ -91,6 +108,8 @@ def crear_tablas():
     exec_sql(crear_distrito)
     exec_sql(crear_comuna)
     exec_sql(crear_diputado)
+    exec_sql(crear_p_ley)
+    exec_sql(crear_voto)
 
 
 def diputados():
