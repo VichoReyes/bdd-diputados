@@ -152,13 +152,15 @@ def crear_tablas():
     exec_sql(crear_diputado)
     exec_sql(crear_p_ley)
     exec_sql(crear_voto)
+    exec_sql(crear_materia)
+    exec_sql(crear_relacionado_a)
 
 
 prefijo_horrible = "{http://opendata.camara.cl/camaradiputados/v1}"
 
 def hijo(nodo: ET.Element, tag: str):
     ret = nodo.find(prefijo_horrible+tag)
-    assert ret
+    assert ret != None
     return ret
 
 
@@ -169,8 +171,8 @@ def votos2019():
     for vot in content:
         if vot.find(prefijo_horrible+"Tipo").text != "Proyecto de Ley":
             continue
-        votid = int(hijo("Id").text)
-        boletin = regex.search(hijo(vot[1], "Descripcion").text).group(0)
+        votid = int(hijo(vot, "Id").text)
+        boletin = regex.search(hijo(vot, "Descripcion").text).group(0)
         insertar_p_si_falta(boletin)
         insertar_votacion(votid, boletin)
 
