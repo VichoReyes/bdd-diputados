@@ -193,6 +193,13 @@ def insertar_p_si_falta(boletin: str):
     resumen = hijo(content, "Nombre").text
     fecha = hijo(content, "FechaIngreso").text.split('T')[0]
     exec_sql(insertar_p_ley, (forid, boletin, resumen, fecha))
+    materias = hijo(content, "Materias")
+    for materia in materias:
+        mat_id = int(hijo(materia, "Id").text)
+        nombre = hijo(materia, "Nombre").text
+        exec_sql(insertar_materia, (mat_id, nombre))
+        exec_sql(insertar_relacionado_a, (mat_id, boletin))
+
 
 
 def insertar_votacion(id: int, boletin: str):

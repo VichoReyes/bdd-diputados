@@ -12,6 +12,8 @@
             "console": "integratedTerminal",
             "args": [
                 "crear_tablas",
+                "distritos",
+                "diputados",
                 "votos2019"
             ]
         }
