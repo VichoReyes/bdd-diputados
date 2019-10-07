@@ -238,7 +238,7 @@ def diputados():
     content = get_with_cache("diputados.xml", url)
     assert len(content) == len(distritos_actuales)
     for num_dist, diputado_periodo in zip(distritos_actuales, content):
-        diputado = diputado_periodo[2]
+        diputado = hijo(diputado_periodo, "Diputado")
         insertar_diputado_particular(diputado, num_dist=num_dist)
 
 
@@ -250,17 +250,14 @@ def insertar_diputado_desde_id(dipu_id: int, num_dist=None):
 
 
 def insertar_diputado_particular(diputado: ET.Element, num_dist=None):
-    assert clean_tag(diputado[0]) == "Id"
-    assert clean_tag(diputado[1]) == "Nombre"
-    assert clean_tag(diputado[3]) == "ApellidoPaterno"
-    assert clean_tag(diputado[4]) == "ApellidoMaterno"
-    tiene_nacimiento = clean_tag(diputado[5]) == "FechaNacimiento"
-    dipid = int(diputado[0].text)
-    nombre = diputado[1].text
-    a_pat = diputado[3].text
-    a_mat = diputado[4].text
-    nacimiento = diputado[5].text.split(
-        'T')[0] if tiene_nacimiento else None
+    dipid = int(hijo(diputado, "Id").text)
+    nombre = hijo(diputado, "Nombre").text
+    a_pat = hijo(diputado, "ApellidoPaterno").text
+    a_mat = hijo(diputado, "ApellidoMaterno").text
+    try:
+        nacimiento = hijo(diputado, "FechaNacimiento").text.split('T')[0]
+    except:
+        nacimiento = None
     exec_sql(insertar_diputado, vals=(dipid, nombre,
                                       a_pat, a_mat, nacimiento, num_dist))
 
