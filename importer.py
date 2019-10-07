@@ -14,16 +14,11 @@ def exec_sql(statement: str, vals=()) -> None:
     c.close()
 
 
-def clean_tag(el: ET.Element) -> str:
-    return el.tag.split('}')[-1]
-
-
-# TODO diagrama
 crear_comuna = '''
 CREATE TABLE IF NOT EXISTS comuna (
     distrito int references distrito(numero),
     nombre varchar(50),
-    numero int primary key -- actualizar E-R
+    numero int primary key
 );
 '''
 
@@ -33,14 +28,13 @@ CREATE TABLE IF NOT EXISTS distrito (
 );
 '''
 
-# TODO diagrama
 crear_diputado = '''
 CREATE TABLE IF NOT EXISTS diputado (
     id int primary key,
     nombre varchar(50),
-    a_paterno varchar(50), -- actualizar E-R
-    a_materno varchar(50), -- actualizar E-R
-    nacimiento date, -- actualizar E-R
+    a_paterno varchar(50),
+    a_materno varchar(50),
+    nacimiento date,
     distrito int references distrito(numero)
 );
 '''
@@ -49,7 +43,7 @@ crear_p_ley = '''
 CREATE TABLE IF NOT EXISTS p_ley (
     foreign_id int,
     boletin varchar(10) primary key,
-    resumen text, -- actualizar E-R
+    resumen text,
     fecha_ingreso date
 );
 '''
@@ -186,7 +180,6 @@ def insertar_p_si_falta(boletin: str):
         return
     url = "http://opendata.camara.cl/camaradiputados/WServices/WSLegislativo.asmx/retornarProyectoLey?prmNumeroBoletin="+boletin
     content = get_with_cache("p_ley_"+boletin+".xml", url)
-    # assert clean_tag(content[8]) == "Materias"
     forid = hijo(content, "Id").text
     resumen = hijo(content, "Nombre").text
     fecha = hijo(content, "FechaIngreso").text.split('T')[0]
@@ -264,11 +257,9 @@ def distritos():
     url = "http://opendata.camara.cl/camaradiputados/WServices/WSComun.asmx/retornarDistritos"
     content = get_with_cache("distritos.xml", url)
     for distrito in content:
-        assert clean_tag(distrito[0]) == "Numero"
-        assert clean_tag(distrito[1]) == "Comunas"
-        num_dist = int(distrito[0].text)
+        num_dist = int(hijo(distrito, "Numero").text)
         exec_sql(insertar_distrito, vals=(num_dist,))
-        crear_comunas(distrito[1], num_dist)
+        crear_comunas(hijo(distrito, "Comunas"), num_dist)
 
 
 tareas = ["crear_tablas", "distritos", "diputados", "votos2019"]
