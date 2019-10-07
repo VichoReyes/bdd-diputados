@@ -139,10 +139,8 @@ def get_with_cache(filename: str, url: str) -> ET.Element:
 
 def crear_comunas(comunas, num_dist):
     for com in comunas:
-        assert clean_tag(com[0]) == "Numero"
-        assert clean_tag(com[1]) == "Nombre"
-        nombre = com[1].text
-        numero = int(com[0].text)
+        nombre = hijo(com, "Nombre").text
+        numero = int(hijo(com, "Numero").text)
         exec_sql(insertar_comuna, (num_dist, nombre, numero))
 
 
