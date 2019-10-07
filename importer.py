@@ -69,15 +69,15 @@ CREATE TABLE IF NOT EXISTS materia (
 );
 '''
 
-crear_relacionado_a = '''
-CREATE TABLE IF NOT EXISTS relacionado_a (
+crear_trata_sobre = '''
+CREATE TABLE IF NOT EXISTS trata_sobre (
     materia int references materia(id),
     boletin varchar(10) references p_ley(boletin)
 );
 '''
 
-insertar_relacionado_a = '''
-INSERT INTO relacionado_a
+insertar_trata_sobre = '''
+INSERT INTO trata_sobre
 (materia, boletin)
 VALUES (%s, %s)
 ON CONFLICT DO NOTHING;
@@ -153,7 +153,7 @@ def crear_tablas():
     exec_sql(crear_p_ley)
     exec_sql(crear_voto)
     exec_sql(crear_materia)
-    exec_sql(crear_relacionado_a)
+    exec_sql(crear_trata_sobre)
 
 
 prefijo_horrible = "{http://opendata.camara.cl/camaradiputados/v1}"
@@ -198,7 +198,7 @@ def insertar_p_si_falta(boletin: str):
         mat_id = int(hijo(materia, "Id").text)
         nombre = hijo(materia, "Nombre").text
         exec_sql(insertar_materia, (mat_id, nombre))
-        exec_sql(insertar_relacionado_a, (mat_id, boletin))
+        exec_sql(insertar_trata_sobre, (mat_id, boletin))
 
 
 
