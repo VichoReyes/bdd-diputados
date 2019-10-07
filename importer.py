@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS voto (
 crear_materia = '''
 CREATE TABLE IF NOT EXISTS materia (
     id int primary key,
-    nombre varchar(100)
+    nombre text
 );
 '''
 
