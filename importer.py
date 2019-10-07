@@ -128,18 +128,21 @@ def crear_tablas():
 
 prefijo_horrible = "{http://opendata.camara.cl/camaradiputados/v1}"
 
+def hijo(nodo: ET.Element, tag: str):
+    ret = nodo.find(prefijo_horrible+tag)
+    assert ret
+    return ret
+
 
 def votos2019():
     regex = re.compile("[0-9]+-[0-9]+")
     url = "http://opendata.camara.cl/camaradiputados/WServices/WSLegislativo.asmx/retornarVotacionesXAnno?prmAnno=2019"
     content = get_with_cache("votos2019.xml", url)
     for vot in content:
-        assert clean_tag(vot[0]) == "Id"
-        assert clean_tag(vot[1]) == "Descripcion"
         if vot.find(prefijo_horrible+"Tipo").text != "Proyecto de Ley":
             continue
-        votid = int(vot[0].text)
-        boletin = regex.search(vot[1].text).group(0)
+        votid = int(hijo("Id").text)
+        boletin = regex.search(hijo(vot[1], "Descripcion").text).group(0)
         insertar_p_si_falta(boletin)
         insertar_votacion(votid, boletin)
 
@@ -155,13 +158,10 @@ def insertar_p_si_falta(boletin: str):
         return
     url = "http://opendata.camara.cl/camaradiputados/WServices/WSLegislativo.asmx/retornarProyectoLey?prmNumeroBoletin="+boletin
     content = get_with_cache("p_ley_"+boletin+".xml", url)
-    assert clean_tag(content[0]) == "Id"
-    assert clean_tag(content[2]) == "Nombre"
-    assert clean_tag(content[3]) == "FechaIngreso"
     # assert clean_tag(content[8]) == "Materias"
-    forid = content[0].text
-    resumen = content[2].text
-    fecha = content[3].text.split('T')[0]
+    forid = hijo(content, "Id").text
+    resumen = hijo(content, "Nombre").text
+    fecha = hijo(content, "FechaIngreso").text.split('T')[0]
     exec_sql(insertar_p_ley, (forid, boletin, resumen, fecha))
 
 
