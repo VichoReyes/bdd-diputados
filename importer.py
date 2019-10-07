@@ -62,6 +62,34 @@ CREATE TABLE IF NOT EXISTS voto (
 );
 '''
 
+crear_materia = '''
+CREATE TABLE IF NOT EXISTS materia (
+    id int primary key,
+    nombre varchar(100)
+);
+'''
+
+crear_relacionado_a = '''
+CREATE TABLE IF NOT EXISTS relacionado_a (
+    materia int references materia(id),
+    boletin varchar(10) references p_ley(boletin)
+);
+'''
+
+insertar_relacionado_a = '''
+INSERT INTO relacionado_a
+(materia, boletin)
+VALUES (%s, %s)
+ON CONFLICT DO NOTHING;
+'''
+
+insertar_materia = '''
+INSERT INTO materia
+(id, nombre)
+VALUES (%s, %s)
+ON CONFLICT DO NOTHING;
+'''
+
 insertar_p_ley = '''
 INSERT INTO p_ley
 (foreign_id, boletin, resumen, fecha_ingreso)
