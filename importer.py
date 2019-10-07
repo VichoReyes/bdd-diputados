@@ -185,14 +185,23 @@ def insertar_votacion(id: int, boletin: str):
             insertar_diputado_desde_id(id_diputado)
             exec_sql(insertar_voto, vals=(id_diputado, boletin, opcion))
 
+distritos_actuales = [17,10,27,23,26,17,28,26,8,1,9,16,14,24,
+             26,28,20,28,7,27,9,12,19,10,3,15,23,7,4,
+             4,14,12,10,11,8,7,9,13,5,25,10,24,6,5,
+             11,5,2,23,14,9,20,7,2,25,3,8,11,7,6,24,
+             10,19,12,13,25,6,9,15,26,12,8,14,27,6,17,
+             11,15,6,18,8,16,23,23,1,8,23,21,17,13,4,20
+             ,18,4,21,5,3,25,9,9,20,12,6,22,22,21,12,21,
+             3,17,11,22,18,17,1,7,20,24,20,19,10,23,5,19,
+             4,26,14,19,15,6,16,17,8,14,15,13,20,10,7,2,
+             16,11,18,7,21,12,20,3,5,22,6,8,24,5,10,13]
 
 def diputados():
-    url = "http://opendata.camara.cl/camaradiputados/WServices/WSDiputado.asmx/retornarDiputadosXPeriodo?prmPeriodoId=8"
+    url = "http://opendata.camara.cl/camaradiputados/WServices/WSDiputado.asmx/retornarDiputadosXPeriodo?prmPeriodoId=9"
     content = get_with_cache("diputados.xml", url)
-    for diputado_periodo in content:
+    assert len(content) == len(distritos_actuales)
+    for num_dist, diputado_periodo in zip(distritos_actuales, content):
         diputado = diputado_periodo[2]
-        assert clean_tag(diputado_periodo[3]) == "Distrito"
-        num_dist = int(diputado_periodo[3][0].text)
         insertar_diputado_particular(diputado, num_dist=num_dist)
 
 
